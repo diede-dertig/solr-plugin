@@ -15,9 +15,18 @@ class SolrIndexTask extends BuildTask {
 	
 	protected $types = array();
 	
+	/**
+	 * @todo: change $type to $class
+	 */
+
 	public function run($request) {
 
-		$type = Convert::raw2sql($request->getVar('type'));
+		// parse a type parameter 
+		$type = Convert::raw2sql($request->getVar('type')); 
+		if ($type && !ClassInfo::exists($type)) {
+			echo "type does not exist; returning\n";
+			return;
+		}
 
 		if($type) {
 			$this->types[] = $type;
@@ -29,34 +38,20 @@ class SolrIndexTask extends BuildTask {
 			}
 		}
 
-		$solrSearchService = singleton('SolrSearchService');
-		$client = $solrSearchService->getClient();
-
-		$count = 0;
+		$solrService = singleton('solrService');
 		
 		foreach ($this->types as $type) {
 
-			$update = $client->createUpdate();
-
-			$search->getSolr()->deleteByQuery('ClassName_as:' . $type);
-			$search->getSolr()->commit();
-
-			// get the holders first, see if we have any that AREN'T in the root (ie we've already partitioned everything...)
-			$objects = DataObject::get($type);
-
-			/* @var $search SolrSearchService */
-
-			foreach ($objects as $page) {
-
-				//  index object
-				$search->index($object);
-				echo "<p>Reindexed $type ID#$object->ID</p>\n";
-				$count++;
-				
-			}
+			// delete all existing objects of type
+			$solrService->deleteAll($type);
 			
+			// get all dataObjects of type
+			$dataObjects = DataObject::get($type);
+			$solrService->index($dataObjects);
+
+			echo "Reindexed $type's, {$dataObjects->Count()} objects indexed\n";
+
 		}
 		
-		echo "Reindex complete, $count objects re-indexed<br/>";
 	}
 }

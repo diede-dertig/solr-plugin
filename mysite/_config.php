@@ -16,7 +16,7 @@ $databaseConfig = array(
 // Set the site locale
 i18n::set_locale('en_US');
 
-SolrSearchService::$config = array(
+SolrService::$config = array(
 		'endpoint' => array(
 			'localhost' => array(
 				'host' => 'localhost',
